@@ -56,7 +56,7 @@ upsample_factor = 8
 number_of_classes = 21
 
 log_folder = os.path.join(FLAGS.output_dir, 'train')
-
+eval_folder = os.path.join(FLAGS.output_dir, 'eval')
 vgg_checkpoint_path = FLAGS.checkpoint_path
 
 # Creates a variable to hold the global_step.
@@ -86,11 +86,16 @@ upsampled_logits_shape = tf.stack([
 
 
 pool4_feature = end_points['vgg_16/pool4']
+pool3_feature = end_points['vgg_16/pool3']
 with tf.variable_scope('vgg_16/fc8'):
     aux_logits_16s = slim.conv2d(pool4_feature, number_of_classes, [1, 1],
                                  activation_fn=None,
                                  weights_initializer=tf.zeros_initializer,
                                  scope='conv_pool4')
+    aux_logits_8s = slim.conv2d(pool3_feature, number_of_classes, [1, 1],
+                                 activation_fn=None,
+                                 weights_initializer=tf.zeros_initializer,
+                                 scope='conv_pool3')
 
 # Perform the upsampling
 upsample_filter_np_x2 = bilinear_upsample_weights(2,  # upsample_factor,
@@ -108,18 +113,14 @@ upsampled_logits = upsampled_logits + aux_logits_16s
 
 
 #**********************************************************************
-pool3_feature = end_points['vgg_16/pool3']
-with tf.variable_scope('vgg_16/fc8'):
-    aux_logits_8s = slim.conv2d(pool3_feature, number_of_classes, [1, 1],
-                                 activation_fn=None,
-                                 weights_initializer=tf.zeros_initializer,
-                                 scope='conv_pool3')
+    
 upsample_filter_tensor_x2_8s = tf.Variable(upsample_filter_np_x2, name='vgg_16/fc8/t_conv_x2_8s')
 
 upsampled_logits = tf.nn.conv2d_transpose(upsampled_logits, upsample_filter_tensor_x2_8s,
                                           output_shape=tf.shape(aux_logits_8s),
                                           strides=[1, 2, 2, 1],
                                           padding='SAME')
+upsampled_logits = upsampled_logits + aux_logits_8s
 
 
 upsample_filter_np_8s = bilinear_upsample_weights(upsample_factor,
