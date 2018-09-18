@@ -108,7 +108,7 @@ upsampled_logits = upsampled_logits + aux_logits_16s
 
 
 #**********************************************************************
-pool3=_feature = end_points['vgg_16/pool3']
+pool3_feature = end_points['vgg_16/pool3']
 with tf.variable_scope('vgg_16/fc8'):
     aux_logits_8s = slim.conv2d(pool3_feature, number_of_classes, [1, 1],
                                  activation_fn=None,
